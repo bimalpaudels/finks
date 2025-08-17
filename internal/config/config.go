@@ -17,12 +17,10 @@ type Config struct {
 
 type DeploymentConfig struct {
 	DataDir string `yaml:"data_dir"`
-	LogsDir string `yaml:"logs_dir"`
 }
 
 type MonitoringConfig struct {
 	MetricsInterval     time.Duration `yaml:"metrics_interval"`
-	LogRetention        string        `yaml:"log_retention"`
 	HealthCheckInterval time.Duration `yaml:"health_check_interval"`
 }
 
@@ -42,11 +40,9 @@ func Load(configPath string) (*Config, error) {
 	config := &Config{
 		Deployment: DeploymentConfig{
 			DataDir: "/var/lib/finks",
-			LogsDir: "/var/log/finks",
 		},
 		Monitoring: MonitoringConfig{
 			MetricsInterval:     30 * time.Second,
-			LogRetention:        "7d",
 			HealthCheckInterval: 10 * time.Second,
 		},
 		Docker: DockerConfig{
