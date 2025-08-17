@@ -25,17 +25,46 @@ func NewMetricsService() *MetricsService {
 
 // GetMetrics collects comprehensive system metrics
 func (ms *MetricsService) GetMetrics() (*ServerMetrics, error) {
+	return ms.getMetricsWithProcesses(true)
+}
+
+// GetSimpleMetrics collects essential metrics quickly (no process enumeration)
+func (ms *MetricsService) GetSimpleMetrics() (*ServerMetrics, error) {
+	return ms.getMetricsWithProcesses(false)
+}
+
+func (ms *MetricsService) getMetricsWithProcesses(includeProcesses bool) (*ServerMetrics, error) {
 	ctx := context.Background()
 	timestamp := time.Now()
 
-	// Collect all metrics concurrently for better performance
+	// Collect essential metrics
 	cpuMetrics := ms.getCPUMetrics(ctx)
 	memoryMetrics := ms.getMemoryMetrics(ctx)
-	diskMetrics := ms.getDiskMetrics(ctx)
+	var diskMetrics DiskMetrics
+	if includeProcesses {
+		diskMetrics = ms.getComprehensiveDiskMetrics(ctx)
+	} else {
+		diskMetrics = ms.getSimpleDiskMetrics(ctx)
+	}
 	networkMetrics := ms.getNetworkMetrics(ctx)
-	processMetrics := ms.getProcessMetrics(ctx)
 	loadMetrics := ms.getLoadMetrics(ctx)
 	systemMetrics := ms.getSystemMetrics(ctx)
+
+	// Only collect expensive process metrics if requested
+	var processMetrics ProcessMetrics
+	if includeProcesses {
+		processMetrics = ms.getProcessMetrics(ctx)
+	} else {
+		// Provide minimal process info without enumeration
+		processMetrics = ProcessMetrics{
+			Total:     0,
+			Running:   0,
+			Sleeping:  0,
+			Zombie:    0,
+			TopCPU:    []ProcessInfo{},
+			TopMemory: []ProcessInfo{},
+		}
+	}
 
 	return &ServerMetrics{
 		Timestamp: timestamp,
@@ -50,15 +79,15 @@ func (ms *MetricsService) GetMetrics() (*ServerMetrics, error) {
 }
 
 func (ms *MetricsService) getCPUMetrics(ctx context.Context) CPUMetrics {
-	// Get overall CPU usage
-	cpuPercent, _ := cpu.PercentWithContext(ctx, time.Second, false)
+	// Get overall CPU usage with minimal delay
+	cpuPercent, _ := cpu.PercentWithContext(ctx, 100*time.Millisecond, false)
 	var usage float64
 	if len(cpuPercent) > 0 {
 		usage = cpuPercent[0]
 	}
 
-	// Get per-core CPU usage
-	perCore, _ := cpu.PercentWithContext(ctx, time.Second, true)
+	// Get per-core CPU usage with minimal delay
+	perCore, _ := cpu.PercentWithContext(ctx, 100*time.Millisecond, true)
 
 	// Get detailed CPU times
 	cpuTimes, _ := cpu.TimesWithContext(ctx, false)
@@ -118,7 +147,7 @@ func (ms *MetricsService) getMemoryMetrics(ctx context.Context) MemoryMetrics {
 	return memory
 }
 
-func (ms *MetricsService) getDiskMetrics(ctx context.Context) DiskMetrics {
+func (ms *MetricsService) getSimpleDiskMetrics(ctx context.Context) DiskMetrics {
 	diskStat, _ := disk.UsageWithContext(ctx, "/")
 	
 	var diskMetrics DiskMetrics
@@ -131,7 +160,29 @@ func (ms *MetricsService) getDiskMetrics(ctx context.Context) DiskMetrics {
 		diskMetrics.InodesUsed = diskStat.InodesUsed
 	}
 
-	// Get disk I/O stats
+	// Skip expensive I/O stats for simple metrics - set to 0
+	diskMetrics.ReadIOPS = 0
+	diskMetrics.WriteIOPS = 0
+	diskMetrics.ReadMBps = 0
+	diskMetrics.WriteMBps = 0
+
+	return diskMetrics
+}
+
+func (ms *MetricsService) getComprehensiveDiskMetrics(ctx context.Context) DiskMetrics {
+	diskStat, _ := disk.UsageWithContext(ctx, "/")
+	
+	var diskMetrics DiskMetrics
+	if diskStat != nil {
+		diskMetrics.Total = diskStat.Total
+		diskMetrics.Used = diskStat.Used
+		diskMetrics.Free = diskStat.Free
+		diskMetrics.UsedPercent = diskStat.UsedPercent
+		diskMetrics.InodesTotal = diskStat.InodesTotal
+		diskMetrics.InodesUsed = diskStat.InodesUsed
+	}
+
+	// Get disk I/O stats (expensive operation)
 	ioStats, _ := disk.IOCountersWithContext(ctx)
 	var readIOPS, writeIOPS uint64
 	var readMBps, writeMBps float64

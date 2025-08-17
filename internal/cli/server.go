@@ -12,6 +12,7 @@ import (
 var (
 	live     bool
 	interval string
+	all      bool
 )
 
 // serverCmd represents the server command
@@ -40,6 +41,10 @@ var metricsCmd = &cobra.Command{
 			fmt.Println("📊 Live streaming server metrics (Press Ctrl+C to stop)...")
 			fmt.Println("")
 
+			// Enable screen clearing for live mode
+			monitor.SetClearScreenMode(true)
+			defer monitor.SetClearScreenMode(false)
+
 			// Parse interval
 			duration, err := time.ParseDuration(interval)
 			if err != nil {
@@ -50,22 +55,46 @@ var metricsCmd = &cobra.Command{
 			defer ticker.Stop()
 
 			for range ticker.C {
-				metrics, err := metricsService.GetMetrics()
+				var metrics *monitor.ServerMetrics
+				var err error
+				
+				if all {
+					metrics, err = metricsService.GetMetrics()
+				} else {
+					metrics, err = metricsService.GetSimpleMetrics()
+				}
+				
 				if err != nil {
 					fmt.Printf("Error retrieving metrics: %v\n", err)
 					continue
 				}
 
-				monitor.DisplayMetrics(metrics)
+				if all {
+					monitor.DisplayMetrics(metrics)
+				} else {
+					monitor.DisplaySimpleMetrics(metrics)
+				}
 			}
 		} else {
-			metrics, err := metricsService.GetMetrics()
+			var metrics *monitor.ServerMetrics
+			var err error
+			
+			if all {
+				metrics, err = metricsService.GetMetrics()
+			} else {
+				metrics, err = metricsService.GetSimpleMetrics()
+			}
+			
 			if err != nil {
 				fmt.Printf("Error retrieving metrics: %v\n", err)
 				os.Exit(1)
 			}
 
-			monitor.DisplayMetrics(metrics)
+			if all {
+				monitor.DisplayMetrics(metrics)
+			} else {
+				monitor.DisplaySimpleMetrics(metrics)
+			}
 		}
 	},
 }
@@ -77,4 +106,5 @@ func init() {
 	// Add flags for metrics command
 	metricsCmd.Flags().BoolVarP(&live, "live", "l", false, "Stream metrics in real-time")
 	metricsCmd.Flags().StringVarP(&interval, "interval", "i", "2s", "Update interval for live metrics (e.g., 1s, 5s)")
+	metricsCmd.Flags().BoolVarP(&all, "all", "a", false, "Show comprehensive metrics including processes and detailed stats")
 }

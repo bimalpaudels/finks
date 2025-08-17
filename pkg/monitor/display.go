@@ -35,9 +35,38 @@ const (
 	Critical    = "✗"
 )
 
-// DisplayMetrics renders comprehensive metrics with visual enhancements
+// DisplaySimpleMetrics renders essential metrics quickly for default view
+func DisplaySimpleMetrics(metrics *ServerMetrics) {
+	
+	// Header
+	fmt.Printf("%s%s🦜 Finks System Monitor - %s%s\n",
+		ColorBold, ColorCyan,
+		metrics.Timestamp.Format("2006-01-02 15:04:05"),
+		ColorReset)
+	fmt.Printf("%s%s%s\n\n", ColorDim, strings.Repeat("─", 60), ColorReset)
+	
+	// System Overview
+	displaySimpleSystemOverview(&metrics.System, &metrics.Load)
+	
+	// CPU Metrics
+	displaySimpleCPUMetrics(&metrics.CPU)
+	
+	// Memory Metrics
+	displaySimpleMemoryMetrics(&metrics.Memory)
+	
+	// Disk Metrics
+	displaySimpleDiskMetrics(&metrics.Disk)
+	
+	// Network Metrics (key addition)
+	displaySimpleNetworkMetrics(&metrics.Network)
+}
+
+// DisplayMetrics renders comprehensive metrics with visual enhancements  
 func DisplayMetrics(metrics *ServerMetrics) {
-	fmt.Print("\033[2J\033[H") // Clear screen and move cursor to top
+	// Only clear screen for live mode (will be handled by CLI)
+	if shouldClearScreen() {
+		fmt.Print("\033[2J\033[H")
+	}
 	
 	// Header
 	fmt.Printf("%s%s🦜 Finks System Monitor - %s%s\n",
@@ -380,4 +409,90 @@ func truncateString(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen-1] + "…"
+}
+
+// Global variable to track if we should clear screen (for live mode)
+var clearScreenMode = false
+
+func SetClearScreenMode(enabled bool) {
+	clearScreenMode = enabled
+}
+
+func shouldClearScreen() bool {
+	return clearScreenMode
+}
+
+// Simple display functions for fast default view
+
+func displaySimpleSystemOverview(system *SystemMetrics, load *LoadMetrics) {
+	fmt.Printf("%s%s 🖥️  SYSTEM%s ", ColorBold, ColorBlue, ColorReset)
+	
+	uptimeHours := system.Uptime / 3600
+	uptimeDays := int(uptimeHours / 24)
+	uptimeRemainHours := int(uptimeHours) % 24
+	
+	fmt.Printf("%s%s  %dd %dh  %d cores%s\n",
+		ColorDim, system.Hostname,
+		uptimeDays, uptimeRemainHours,
+		system.NumCPU, ColorReset)
+	
+	// Simple load average
+	loadColor := getLoadColor(load.Load1, system.NumCPU)
+	fmt.Printf("  %sLoad:%s %s%.2f%s\n\n",
+		ColorCyan, ColorReset,
+		loadColor, load.Load1, ColorReset)
+}
+
+func displaySimpleCPUMetrics(cpu *CPUMetrics) {
+	fmt.Printf("%s%s ⚡ CPU%s ", ColorBold, ColorYellow, ColorReset)
+	
+	cpuColor := getPercentageColor(cpu.Usage)
+	bar := createPercentageBar(cpu.Usage, 20)
+	fmt.Printf("%s%5.1f%%%s %s\n",
+		cpuColor, cpu.Usage, ColorReset, bar)
+	fmt.Println()
+}
+
+func displaySimpleMemoryMetrics(memory *MemoryMetrics) {
+	fmt.Printf("%s%s 💾 MEMORY%s ", ColorBold, ColorPurple, ColorReset)
+	
+	memColor := getPercentageColor(memory.UsedPercent)
+	memBar := createPercentageBar(memory.UsedPercent, 20)
+	fmt.Printf("%s%5.1f%%%s %s (%s / %s)\n",
+		memColor, memory.UsedPercent, ColorReset, memBar,
+		formatBytes(memory.Used), formatBytes(memory.Total))
+	fmt.Println()
+}
+
+func displaySimpleDiskMetrics(disk *DiskMetrics) {
+	fmt.Printf("%s%s 💿 DISK%s ", ColorBold, ColorGreen, ColorReset)
+	
+	diskColor := getPercentageColor(disk.UsedPercent)
+	diskBar := createPercentageBar(disk.UsedPercent, 20)
+	fmt.Printf("%s%5.1f%%%s %s (%s / %s)\n",
+		diskColor, disk.UsedPercent, ColorReset, diskBar,
+		formatBytes(disk.Used), formatBytes(disk.Total))
+	fmt.Println()
+}
+
+func displaySimpleNetworkMetrics(network *NetworkMetrics) {
+	fmt.Printf("%s%s 🌐 NETWORK%s ", ColorBold, ColorCyan, ColorReset)
+	
+	fmt.Printf("↓ %s%.1f MB/s%s  ↑ %s%.1f MB/s%s  %sConns:%s %d\n",
+		ColorGreen, network.ThroughputIn, ColorReset,
+		ColorYellow, network.ThroughputOut, ColorReset,
+		ColorDim, ColorReset, network.Connections)
+	
+	// Show errors/drops if any
+	if network.Errin > 0 || network.Errout > 0 || network.Dropin > 0 || network.Dropout > 0 {
+		fmt.Printf("  %sIssues:%s ", ColorCyan, ColorReset)
+		if network.Errin+network.Errout > 0 {
+			fmt.Printf("%sErrors:%s %s%d%s ", ColorRed, ColorReset, ColorRed, network.Errin+network.Errout, ColorReset)
+		}
+		if network.Dropin+network.Dropout > 0 {
+			fmt.Printf("%sDropped:%s %s%d%s ", ColorYellow, ColorReset, ColorYellow, network.Dropin+network.Dropout, ColorReset)
+		}
+		fmt.Println()
+	}
+	fmt.Println()
 }
