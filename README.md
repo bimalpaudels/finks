@@ -1,12 +1,11 @@
 ![Active Development](https://img.shields.io/badge/Active%20Development-green?style=for-the-badge) ![CLI Tool](https://img.shields.io/badge/CLI%20Tool-blue?style=for-the-badge) ![Self Hosting](https://img.shields.io/badge/Self%20Hosting-orange?style=for-the-badge)
 
-![Go](https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) ![YAML](https://img.shields.io/badge/yaml-%23ffffff.svg?style=for-the-badge&logo=yaml&logoColor=151515) ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
-
-# Finks - Lightweight Self-Hosting PaaS Agent
+![Go](https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
+# Finks - Lightweight Self-Hosting Platform-as-a-Service Agent
 
 > **Finks** - From German "Fink" (finch): a small, agile songbird known for adaptability and efficient foraging
 
-A CLI self-hosting Platform-as-a-Service tool that enables developers to deploy and manage applications on their own servers with minimal overhead. Like a flock of finches working in perfect harmony, Finks orchestrates your infrastructure with speed, precision, and adaptability.
+A CLI self-hosting Platform-as-a-Service tool that enables developers to deploy and manage applications on their own servers with minimal overhead.
 
 ## What it will do
 
