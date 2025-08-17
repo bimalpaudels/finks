@@ -2,11 +2,16 @@ package main
 
 import (
 	"fmt"
+	"os"
+
+	"github.com/bimalpaudels/finks/internal/cli"
 )
 
 const version = "0.1.0"
 
 func main() {
-	fmt.Printf("🦜 Finks v%s - Lightweight Self-Hosting PaaS Tool\n", version)
-	fmt.Println("Ready for implementation with beautiful terminal UI!")
+	if err := cli.Execute(); err != nil {
+		fmt.Printf("Error: %v\n", err)
+		os.Exit(1)
+	}
 }
