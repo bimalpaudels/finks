@@ -1,4 +1,6 @@
-![Active Development](https://img.shields.io/badge/Active%20Development-green?style=for-the-badge) ![Go](https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) ![Self-Hosting](https://img.shields.io/badge/Self-Hosting-blue?style=for-the-badge)
+![Active Development](https://img.shields.io/badge/Active%20Development-green?style=for-the-badge) ![CLI Tool](https://img.shields.io/badge/CLI%20Tool-blue?style=for-the-badge) ![Self Hosting](https://img.shields.io/badge/Self%20Hosting-orange?style=for-the-badge)
+
+![Go](https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white) ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) ![YAML](https://img.shields.io/badge/yaml-%23ffffff.svg?style=for-the-badge&logo=yaml&logoColor=151515) ![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)
 
 # Finks - Lightweight Self-Hosting PaaS Agent
 
