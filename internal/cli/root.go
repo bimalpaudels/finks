@@ -16,6 +16,7 @@ It provides commands to monitor, deploy, and manage applications with ease.`,
 		fmt.Println("🦜 Finks - Lightweight Self-Hosting PaaS Tool")
 		fmt.Println("")
 		fmt.Println("Available Commands:")
+		fmt.Println("  app        Application deployment and management")
 		fmt.Println("  server     Server management commands")
 		fmt.Println("")
 		fmt.Println("Use 'finks [command] --help' for more information about a command.")
@@ -29,5 +30,5 @@ func Execute() error {
 
 func init() {
 	// Add subcommands
-	rootCmd.AddCommand(serverCmd)
+	rootCmd.AddCommand(appCmd, serverCmd)
 }
