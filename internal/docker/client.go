@@ -2,164 +2,229 @@ package docker
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os/exec"
+	"io"
 	"strings"
+
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
-var (
-	ErrDockerNotFound = errors.New("docker command not found - please install Docker")
-	ErrDockerNotRunning = errors.New("docker daemon is not running - please start Docker")
-)
+type Client struct {
+	cli *client.Client
+}
 
-type Client struct{}
+func NewClient() (*Client, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Docker client: %w", err)
+	}
 
-func NewClient() *Client {
-	return &Client{}
+	return &Client{
+		cli: cli,
+	}, nil
+}
+
+func (c *Client) Close() error {
+	return c.cli.Close()
 }
 
 func (c *Client) IsAvailable(ctx context.Context) error {
-	_, err := exec.LookPath("docker")
+	_, err := c.cli.Ping(ctx)
 	if err != nil {
-		return ErrDockerNotFound
+		return fmt.Errorf("docker daemon is not available: %w", err)
 	}
-
-	cmd := exec.CommandContext(ctx, "docker", "version", "--format", "{{.Server.Version}}")
-	if err := cmd.Run(); err != nil {
-		return ErrDockerNotRunning
-	}
-
 	return nil
 }
 
-func (c *Client) PullImage(ctx context.Context, image string) error {
-	cmd := exec.CommandContext(ctx, "docker", "pull", image)
-	output, err := cmd.CombinedOutput()
+func (c *Client) PullImage(ctx context.Context, imageName string) error {
+	reader, err := c.cli.ImagePull(ctx, imageName, image.PullOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to pull image %s: %w\nOutput: %s", image, err, string(output))
+		return fmt.Errorf("failed to pull image %s: %w", imageName, err)
 	}
+	defer reader.Close()
+
+	// Read the response to ensure the pull completes
+	_, err = io.Copy(io.Discard, reader)
+	if err != nil {
+		return fmt.Errorf("failed to complete image pull for %s: %w", imageName, err)
+	}
+
 	return nil
 }
 
 func (c *Client) RunContainer(ctx context.Context, opts RunOptions) error {
-	args := []string{"run", "-d"}
-	
-	args = append(args, "--name", opts.Name)
-	args = append(args, "--restart", "unless-stopped")
-	
+	// Parse port mappings
+	var portBindings nat.PortMap
+	var exposedPorts nat.PortSet
+
 	if opts.Port != "" {
-		args = append(args, "-p", opts.Port)
+		portBindings = make(nat.PortMap)
+		exposedPorts = make(nat.PortSet)
+
+		// Parse port format (e.g., "8080:80" or "8080:80/tcp")
+		parts := strings.Split(opts.Port, ":")
+		if len(parts) == 2 {
+			hostPort := parts[0]
+			containerPortStr := parts[1]
+
+			// Handle protocol specification
+			var proto string = "tcp"
+			if strings.Contains(containerPortStr, "/") {
+				protoParts := strings.Split(containerPortStr, "/")
+				containerPortStr = protoParts[0]
+				if len(protoParts) > 1 {
+					proto = protoParts[1]
+				}
+			}
+
+			containerPort, err := nat.NewPort(proto, containerPortStr)
+			if err != nil {
+				return fmt.Errorf("invalid container port %s: %w", containerPortStr, err)
+			}
+
+			exposedPorts[containerPort] = struct{}{}
+			portBindings[containerPort] = []nat.PortBinding{
+				{
+					HostPort: hostPort,
+				},
+			}
+		}
 	}
-	
+
+	// Convert environment variables
+	var env []string
 	for key, value := range opts.EnvVars {
-		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+		env = append(env, fmt.Sprintf("%s=%s", key, value))
 	}
-	
-	for _, volume := range opts.Volumes {
-		args = append(args, "-v", volume)
+
+	// Create container configuration
+	config := &container.Config{
+		Image:        opts.Image,
+		Env:          env,
+		ExposedPorts: exposedPorts,
 	}
-	
-	args = append(args, opts.Image)
-	
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
+
+	hostConfig := &container.HostConfig{
+		PortBindings: portBindings,
+		RestartPolicy: container.RestartPolicy{
+			Name: "unless-stopped",
+		},
+		Binds: opts.Volumes,
+	}
+
+	networkConfig := &network.NetworkingConfig{}
+
+	// Create container
+	resp, err := c.cli.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, opts.Name)
 	if err != nil {
-		return fmt.Errorf("failed to run container %s: %w\nOutput: %s", opts.Name, err, string(output))
+		return fmt.Errorf("failed to create container %s: %w", opts.Name, err)
 	}
-	
+
+	// Start container
+	if err := c.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return fmt.Errorf("failed to start container %s: %w", opts.Name, err)
+	}
+
 	return nil
 }
 
 func (c *Client) StopContainer(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "docker", "stop", name)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to stop container %s: %w\nOutput: %s", name, err, string(output))
+	timeout := 30 // 30 seconds timeout
+	options := container.StopOptions{
+		Timeout: &timeout,
+	}
+
+	if err := c.cli.ContainerStop(ctx, name, options); err != nil {
+		return fmt.Errorf("failed to stop container %s: %w", name, err)
 	}
 	return nil
 }
 
 func (c *Client) StartContainer(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "docker", "start", name)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to start container %s: %w\nOutput: %s", name, err, string(output))
+	if err := c.cli.ContainerStart(ctx, name, container.StartOptions{}); err != nil {
+		return fmt.Errorf("failed to start container %s: %w", name, err)
 	}
 	return nil
 }
 
 func (c *Client) RemoveContainer(ctx context.Context, name string, force bool) error {
-	args := []string{"rm"}
-	if force {
-		args = append(args, "-f")
+	options := container.RemoveOptions{
+		Force: force,
 	}
-	args = append(args, name)
-	
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to remove container %s: %w\nOutput: %s", name, err, string(output))
+
+	if err := c.cli.ContainerRemove(ctx, name, options); err != nil {
+		return fmt.Errorf("failed to remove container %s: %w", name, err)
 	}
 	return nil
 }
 
 func (c *Client) ListContainers(ctx context.Context) ([]Container, error) {
-	cmd := exec.CommandContext(ctx, "docker", "ps", "-a", "--format", "{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}")
-	output, err := cmd.Output()
+	containers, err := c.cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list containers: %w", err)
 	}
-	
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	containers := make([]Container, 0, len(lines))
-	
-	for _, line := range lines {
-		if line == "" {
-			continue
+
+	result := make([]Container, 0, len(containers))
+	for _, cont := range containers {
+		// Get container name (remove leading slash)
+		name := ""
+		if len(cont.Names) > 0 {
+			name = strings.TrimPrefix(cont.Names[0], "/")
 		}
-		
-		parts := strings.Split(line, "\t")
-		if len(parts) < 3 {
-			continue
+
+		// Format ports
+		var ports []string
+		for _, port := range cont.Ports {
+			if port.PublicPort != 0 {
+				ports = append(ports, fmt.Sprintf("%d:%d", port.PublicPort, port.PrivatePort))
+			}
 		}
-		
-		container := Container{
-			Name:   parts[0],
-			Image:  parts[1],
-			Status: parts[2],
-		}
-		if len(parts) >= 4 {
-			container.Ports = parts[3]
-		}
-		
-		containers = append(containers, container)
+
+		result = append(result, Container{
+			Name:   name,
+			Image:  cont.Image,
+			Status: cont.Status,
+			Ports:  strings.Join(ports, ", "),
+		})
 	}
-	
-	return containers, nil
+
+	return result, nil
 }
 
 func (c *Client) ContainerExists(ctx context.Context, name string) (bool, error) {
-	cmd := exec.CommandContext(ctx, "docker", "ps", "-a", "--filter", fmt.Sprintf("name=^%s$", name), "--format", "{{.Names}}")
-	output, err := cmd.Output()
+	containers, err := c.cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
-		return false, fmt.Errorf("failed to check if container exists: %w", err)
+		return false, fmt.Errorf("failed to list containers: %w", err)
 	}
-	
-	return strings.TrimSpace(string(output)) == name, nil
+
+	for _, cont := range containers {
+		for _, containerName := range cont.Names {
+			if strings.TrimPrefix(containerName, "/") == name {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
 
 func (c *Client) GetContainerStatus(ctx context.Context, name string) (string, error) {
-	cmd := exec.CommandContext(ctx, "docker", "ps", "-a", "--filter", fmt.Sprintf("name=^%s$", name), "--format", "{{.Status}}")
-	output, err := cmd.Output()
+	containers, err := c.cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
-		return "", fmt.Errorf("failed to get container status: %w", err)
+		return "", fmt.Errorf("failed to list containers: %w", err)
 	}
-	
-	status := strings.TrimSpace(string(output))
-	if status == "" {
-		return "", fmt.Errorf("container %s not found", name)
+
+	for _, cont := range containers {
+		for _, containerName := range cont.Names {
+			if strings.TrimPrefix(containerName, "/") == name {
+				return cont.Status, nil
+			}
+		}
 	}
-	
-	return status, nil
+
+	return "", fmt.Errorf("container %s not found", name)
 }

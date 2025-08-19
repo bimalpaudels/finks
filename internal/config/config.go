@@ -8,7 +8,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
 func Load(configPath string) (*Config, error) {
 	// Set defaults
 	config := &Config{
