@@ -26,8 +26,13 @@ func NewManager() (*Manager, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
+	dockerClient, err := docker.NewClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create docker client: %w", err)
+	}
+
 	manager := &Manager{
-		dockerClient: docker.NewClient(),
+		dockerClient: dockerClient,
 		configPath:   configPath,
 		config: &Config{
 			Apps:    make(map[string]*App),
