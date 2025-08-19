@@ -12,11 +12,6 @@ import (
 	"github.com/bimalpaudels/finks/internal/docker"
 )
 
-type Manager struct {
-	dockerClient *docker.Client
-	configPath   string
-	config       *Config
-}
 
 func NewManager() (*Manager, error) {
 	homeDir, err := os.UserHomeDir()
