@@ -12,7 +12,6 @@ import (
 	"github.com/bimalpaudels/finks/internal/docker"
 )
 
-
 func NewManager() (*Manager, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -26,8 +25,13 @@ func NewManager() (*Manager, error) {
 		return nil, fmt.Errorf("failed to create data directory: %w", err)
 	}
 
+	dockerClient, err := docker.NewClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Docker client: %w", err)
+	}
+
 	manager := &Manager{
-		dockerClient: docker.NewClient(),
+		dockerClient: dockerClient,
 		configPath:   configPath,
 		config: &Config{
 			Apps:    make(map[string]*App),
@@ -42,6 +46,10 @@ func NewManager() (*Manager, error) {
 	return manager, nil
 }
 
+func (m *Manager) Close() error {
+	return m.dockerClient.Close()
+}
+
 func (m *Manager) CheckDockerAvailable(ctx context.Context) error {
 	return m.dockerClient.IsAvailable(ctx)
 }
@@ -52,7 +60,7 @@ func (m *Manager) DeployApp(ctx context.Context, name, image, port string, envVa
 	}
 
 	containerName := fmt.Sprintf("finks-%s", name)
-	
+
 	if exists, err := m.dockerClient.ContainerExists(ctx, containerName); err != nil {
 		return fmt.Errorf("failed to check if container exists: %w", err)
 	} else if exists {
@@ -177,8 +185,7 @@ func (m *Manager) ListApps(ctx context.Context) ([]*App, error) {
 
 	containerStatuses := make(map[string]string)
 	for _, container := range containers {
-		if strings.HasPrefix(container.Name, "finks-") {
-			appName := strings.TrimPrefix(container.Name, "finks-")
+		if appName, found := strings.CutPrefix(container.Name, "finks-"); found {
 			status := StatusRunning
 			if strings.Contains(strings.ToLower(container.Status), "exited") {
 				status = StatusStopped
