@@ -127,5 +127,4 @@ func init() {
 	// Add flags for create command
 	createNetworkCmd.Flags().StringP("driver", "d", "bridge", "Network driver (bridge, overlay, etc.)")
 
-	rootCmd.AddCommand(networkCmd)
 }
