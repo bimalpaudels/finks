@@ -46,7 +46,8 @@ var listNetworksCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		formatNetworkTable(networks)
+		filteredNetworks := filterFinksNetworks(networks)
+		formatNetworkTable(filteredNetworks)
 	},
 }
 
@@ -117,6 +118,16 @@ func formatNetworkTable(networks []docker.NetworkInfo) {
 			gateway,
 		)
 	}
+}
+
+func filterFinksNetworks(networks []docker.NetworkInfo) []docker.NetworkInfo {
+	filteredNetworks := []docker.NetworkInfo{}
+	for _, net := range networks {
+		if strings.HasPrefix(net.Name, "finks-") {
+			filteredNetworks = append(filteredNetworks, net)
+		}
+	}
+	return filteredNetworks
 }
 
 func init() {
