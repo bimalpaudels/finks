@@ -21,10 +21,7 @@ var serverCmd = &cobra.Command{
 	Short: "Server management commands",
 	Long:  `Commands for managing and monitoring your server.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Available server commands:")
-		fmt.Println("  metrics    View server metrics")
-		fmt.Println("")
-		fmt.Println("Use 'finks server [command] --help' for more information.")
+		cmd.Help()
 	},
 }
 
@@ -57,13 +54,13 @@ var metricsCmd = &cobra.Command{
 			for range ticker.C {
 				var metrics *monitor.ServerMetrics
 				var err error
-				
+
 				if all {
 					metrics, err = metricsService.GetMetrics()
 				} else {
 					metrics, err = metricsService.GetSimpleMetrics()
 				}
-				
+
 				if err != nil {
 					fmt.Printf("Error retrieving metrics: %v\n", err)
 					continue
@@ -78,13 +75,13 @@ var metricsCmd = &cobra.Command{
 		} else {
 			var metrics *monitor.ServerMetrics
 			var err error
-			
+
 			if all {
 				metrics, err = metricsService.GetMetrics()
 			} else {
 				metrics, err = metricsService.GetSimpleMetrics()
 			}
-			
+
 			if err != nil {
 				fmt.Printf("Error retrieving metrics: %v\n", err)
 				os.Exit(1)

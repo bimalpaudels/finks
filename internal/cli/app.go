@@ -24,14 +24,7 @@ var appCmd = &cobra.Command{
 	Short: "Application management commands",
 	Long:  `Commands for deploying and managing containerized applications.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Available app commands:")
-		fmt.Println("  deploy     Deploy an application from a Docker image")
-		fmt.Println("  start      Start a stopped application")
-		fmt.Println("  stop       Stop a running application")
-		fmt.Println("  remove         Remove an application")
-		fmt.Println("  list         List all applications")
-		fmt.Println("")
-		fmt.Println("Use 'finks app [command] --help' for more information.")
+		cmd.Help()
 	},
 }
 

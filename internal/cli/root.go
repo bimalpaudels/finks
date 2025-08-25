@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -13,13 +11,7 @@ var rootCmd = &cobra.Command{
 	Long: `Finks is a CLI tool for managing your self-hosted server infrastructure.
 It provides commands to monitor, deploy, and manage applications with ease.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("🦜 Finks - Lightweight Self-Hosting PaaS Tool")
-		fmt.Println("")
-		fmt.Println("Available Commands:")
-		fmt.Println("  app        Application deployment and management")
-		fmt.Println("  server     Server management commands")
-		fmt.Println("")
-		fmt.Println("Use 'finks [command] --help' for more information about a command.")
+		cmd.Help()
 	},
 }
 
