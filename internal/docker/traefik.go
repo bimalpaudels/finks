@@ -6,7 +6,6 @@ import (
 )
 
 
-// GenerateTraefikLabels creates Docker labels for Traefik routing
 func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 	labels := make(map[string]string)
 	
@@ -55,7 +54,6 @@ func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 	return labels
 }
 
-// AddTraefikHealthCheck adds health check labels to existing label set
 func AddTraefikHealthCheck(labels map[string]string, serviceName, healthPath string) {
 	if healthPath != "" {
 		labels[fmt.Sprintf("traefik.http.services.%s.loadbalancer.healthcheck.path", serviceName)] = healthPath

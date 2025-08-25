@@ -9,7 +9,6 @@ import (
 
 
 
-// CreateNetwork creates a new Docker network
 func (c *Client) CreateNetwork(ctx context.Context, name, driver string, labels map[string]string) (string, error) {
 	options := network.CreateOptions{
 		Driver: driver,
@@ -24,7 +23,6 @@ func (c *Client) CreateNetwork(ctx context.Context, name, driver string, labels 
 	return resp.ID, nil
 }
 
-// NetworkExists checks if a network with the given name exists
 func (c *Client) NetworkExists(ctx context.Context, name string) (bool, error) {
 	networks, err := c.cli.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
@@ -40,7 +38,6 @@ func (c *Client) NetworkExists(ctx context.Context, name string) (bool, error) {
 	return false, nil
 }
 
-// GetNetworkInfo retrieves information about a network
 func (c *Client) GetNetworkInfo(ctx context.Context, name string) (*NetworkInfo, error) {
 	resp, err := c.cli.NetworkInspect(ctx, name, network.InspectOptions{})
 	if err != nil {
@@ -64,7 +61,6 @@ func (c *Client) GetNetworkInfo(ctx context.Context, name string) (*NetworkInfo,
 	return info, nil
 }
 
-// ConnectContainerToNetwork connects a container to a network
 func (c *Client) ConnectContainerToNetwork(ctx context.Context, networkName, containerName string) error {
 	err := c.cli.NetworkConnect(ctx, networkName, containerName, nil)
 	if err != nil {
@@ -74,7 +70,6 @@ func (c *Client) ConnectContainerToNetwork(ctx context.Context, networkName, con
 	return nil
 }
 
-// DisconnectContainerFromNetwork disconnects a container from a network
 func (c *Client) DisconnectContainerFromNetwork(ctx context.Context, networkName, containerName string) error {
 	err := c.cli.NetworkDisconnect(ctx, networkName, containerName, false)
 	if err != nil {
@@ -84,7 +79,6 @@ func (c *Client) DisconnectContainerFromNetwork(ctx context.Context, networkName
 	return nil
 }
 
-// ListNetworks lists all Docker networks
 func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 	networks, err := c.cli.NetworkList(ctx, network.ListOptions{})
 	if err != nil {
@@ -113,7 +107,6 @@ func (c *Client) ListNetworks(ctx context.Context) ([]NetworkInfo, error) {
 	return result, nil
 }
 
-// RemoveNetwork removes a Docker network
 func (c *Client) RemoveNetwork(ctx context.Context, name string) error {
 	err := c.cli.NetworkRemove(ctx, name)
 	if err != nil {
