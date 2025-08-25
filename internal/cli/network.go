@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const finksNetworkPrefix = "finks-"
+
 var networkCmd = &cobra.Command{
 	Use:   "network",
 	Short: "Manage Docker networks",
@@ -58,7 +60,7 @@ var createNetworkCmd = &cobra.Command{
 	Long:  `Create a new Docker network with the specified name and optional driver.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		networkName := "finks-" + args[0]
+		networkName := finksNetworkPrefix + args[0]
 		driver := cmd.Flag("driver").Value.String()
 		if driver == "" {
 			driver = "bridge"
@@ -123,7 +125,7 @@ func formatNetworkTable(networks []docker.NetworkInfo) {
 func filterFinksNetworks(networks []docker.NetworkInfo) []docker.NetworkInfo {
 	filteredNetworks := []docker.NetworkInfo{}
 	for _, net := range networks {
-		if strings.HasPrefix(net.Name, "finks-") {
+		if strings.HasPrefix(net.Name, finksNetworkPrefix) {
 			filteredNetworks = append(filteredNetworks, net)
 		}
 	}
