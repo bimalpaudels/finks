@@ -22,5 +22,5 @@ func Execute() error {
 
 func init() {
 	// Add subcommands
-	rootCmd.AddCommand(appCmd, serverCmd)
+	rootCmd.AddCommand(appCmd, serverCmd, networkCmd)
 }
