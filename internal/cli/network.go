@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Prefix to be added to all finks networks
 const finksNetworkPrefix = "finks-"
 
 var dockerClient *docker.Client
@@ -111,7 +112,7 @@ func formatNetworkTable(networks []docker.NetworkInfo) {
 }
 
 func filterFinksNetworks(networks []docker.NetworkInfo) []docker.NetworkInfo {
-	filteredNetworks := []docker.NetworkInfo{}
+	filteredNetworks := make([]docker.NetworkInfo, 0, len(networks))
 	for _, net := range networks {
 		if strings.HasPrefix(net.Name, finksNetworkPrefix) {
 			filteredNetworks = append(filteredNetworks, net)
