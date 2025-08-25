@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bimalpaudels/finks/internal/app"
+	"github.com/bimalpaudels/finks/internal/deployment"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +54,7 @@ Examples:
 			os.Exit(1)
 		}
 
-		manager, err := app.NewManager()
+		manager, err := deployment.NewManager()
 		if err != nil {
 			fmt.Printf("Error: Failed to initialize app manager: %v\n", err)
 			os.Exit(1)
@@ -98,7 +98,7 @@ var startCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		appName := args[0]
 
-		manager, err := app.NewManager()
+		manager, err := deployment.NewManager()
 		if err != nil {
 			fmt.Printf("Error: Failed to initialize app manager: %v\n", err)
 			os.Exit(1)
@@ -131,7 +131,7 @@ var stopCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		appName := args[0]
 
-		manager, err := app.NewManager()
+		manager, err := deployment.NewManager()
 		if err != nil {
 			fmt.Printf("Error: Failed to initialize app manager: %v\n", err)
 			os.Exit(1)
@@ -164,7 +164,7 @@ var rmCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		appName := args[0]
 
-		manager, err := app.NewManager()
+		manager, err := deployment.NewManager()
 		if err != nil {
 			fmt.Printf("Error: Failed to initialize app manager: %v\n", err)
 			os.Exit(1)
@@ -194,7 +194,7 @@ var psCmd = &cobra.Command{
 	Short: "List all applications",
 	Long:  `List all deployed applications with their current status.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		manager, err := app.NewManager()
+		manager, err := deployment.NewManager()
 		if err != nil {
 			fmt.Printf("Error: Failed to initialize app manager: %v\n", err)
 			os.Exit(1)

@@ -1,4 +1,4 @@
-package app
+package deployment
 
 import (
 	"context"

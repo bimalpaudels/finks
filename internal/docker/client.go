@@ -106,6 +106,7 @@ func (c *Client) RunContainer(ctx context.Context, opts RunOptions) error {
 		Image:        opts.Image,
 		Env:          env,
 		ExposedPorts: exposedPorts,
+		Labels:       opts.Labels, // Include Traefik labels
 	}
 
 	hostConfig := &container.HostConfig{
@@ -116,7 +117,15 @@ func (c *Client) RunContainer(ctx context.Context, opts RunOptions) error {
 		Binds: opts.Volumes,
 	}
 
+	// Configure networks
 	networkConfig := &network.NetworkingConfig{}
+	if len(opts.Networks) > 0 {
+		endpointsConfig := make(map[string]*network.EndpointSettings)
+		for _, networkName := range opts.Networks {
+			endpointsConfig[networkName] = &network.EndpointSettings{}
+		}
+		networkConfig.EndpointsConfig = endpointsConfig
+	}
 
 	// Create container
 	resp, err := c.cli.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, opts.Name)
