@@ -50,6 +50,40 @@ var listNetworksCmd = &cobra.Command{
 	},
 }
 
+var createNetworkCmd = &cobra.Command{
+	Use:   "create <network-name>",
+	Short: "Create a new Docker network",
+	Long:  `Create a new Docker network with the specified name and optional driver.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		networkName := "finks-" + args[0]
+		driver := cmd.Flag("driver").Value.String()
+		if driver == "" {
+			driver = "bridge"
+		}
+
+		client, err := docker.NewClient()
+		if err != nil {
+			fmt.Printf("Error: Failed to initialize Docker client: %v\n", err)
+			os.Exit(1)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		fmt.Printf("🔧 Creating network '%s' with driver '%s'...\n", networkName, driver)
+
+		networkID, err := client.CreateNetwork(ctx, networkName, driver, nil)
+		if err != nil {
+			fmt.Printf("Error: Failed to create network: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("✅ Network '%s' created successfully!\n", networkName)
+		fmt.Printf("   Network ID: %s\n", networkID[:12])
+	},
+}
+
 func formatNetworkTable(networks []docker.NetworkInfo) {
 	if len(networks) == 0 {
 		fmt.Println("No networks found.")
@@ -86,6 +120,10 @@ func formatNetworkTable(networks []docker.NetworkInfo) {
 }
 
 func init() {
-	networkCmd.AddCommand(listNetworksCmd)
+	networkCmd.AddCommand(listNetworksCmd, createNetworkCmd)
+
+	// Add flags for create command
+	createNetworkCmd.Flags().StringP("driver", "d", "bridge", "Network driver (bridge, overlay, etc.)")
+
 	rootCmd.AddCommand(networkCmd)
 }
