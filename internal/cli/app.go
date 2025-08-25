@@ -28,8 +28,8 @@ var appCmd = &cobra.Command{
 		fmt.Println("  deploy     Deploy an application from a Docker image")
 		fmt.Println("  start      Start a stopped application")
 		fmt.Println("  stop       Stop a running application")
-		fmt.Println("  rm         Remove an application")
-		fmt.Println("  ps         List all applications")
+		fmt.Println("  remove         Remove an application")
+		fmt.Println("  list         List all applications")
 		fmt.Println("")
 		fmt.Println("Use 'finks app [command] --help' for more information.")
 	},
@@ -156,8 +156,8 @@ var stopCmd = &cobra.Command{
 	},
 }
 
-var rmCmd = &cobra.Command{
-	Use:   "rm <app-name>",
+var removeCmd = &cobra.Command{
+	Use:   "remove <app-name>",
 	Short: "Remove an application",
 	Long:  `Remove an application and its container. Use --force to remove running applications.`,
 	Args:  cobra.ExactArgs(1),
@@ -189,8 +189,8 @@ var rmCmd = &cobra.Command{
 	},
 }
 
-var psCmd = &cobra.Command{
-	Use:   "ps",
+var listCmd = &cobra.Command{
+	Use:   "list",
 	Short: "List all applications",
 	Long:  `List all deployed applications with their current status.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -252,7 +252,7 @@ var psCmd = &cobra.Command{
 }
 
 func init() {
-	appCmd.AddCommand(deployCmd, startCmd, stopCmd, rmCmd, psCmd)
+	appCmd.AddCommand(deployCmd, startCmd, stopCmd, removeCmd, listCmd)
 
 	deployCmd.Flags().StringVar(&appName, "name", "", "Name of the application (required)")
 	deployCmd.Flags().StringVarP(&appPort, "port", "p", "", "Port mapping (e.g., 8080:80)")
@@ -260,5 +260,5 @@ func init() {
 	deployCmd.Flags().StringSliceVarP(&appVolumes, "volume", "v", []string{}, "Volume mounts (e.g., /host:/container)")
 	deployCmd.MarkFlagRequired("name")
 
-	rmCmd.Flags().BoolVarP(&force, "force", "f", false, "Force remove running application")
+	removeCmd.Flags().BoolVarP(&force, "force", "f", false, "Force remove running application")
 }
