@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bimalpaudels/finks/internal/docker"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -85,14 +86,21 @@ var createNetworkCmd = &cobra.Command{
 	},
 }
 
+func valueOrDefault(value, placeholder string) string {
+	if value == "" {
+		return placeholder
+	}
+	return value
+}
+
 func formatNetworkTable(networks []docker.NetworkInfo) {
 	if len(networks) == 0 {
-		fmt.Println("No networks found.")
+		pterm.Warning.Println("No finks networks found.")
 		return
 	}
 
-	fmt.Printf("%-15s %-20s %-10s %-18s %-15s\n", "NAME", "NETWORK ID", "DRIVER", "SUBNET", "GATEWAY")
-	fmt.Println(strings.Repeat("-", 78))
+	tableData := make(pterm.TableData, 1, len(networks)+1)
+	tableData[0] = []string{"NAME", "NETWORK ID", "DRIVER", "SUBNET", "GATEWAY"}
 
 	for _, net := range networks {
 		networkID := net.ID
@@ -100,24 +108,16 @@ func formatNetworkTable(networks []docker.NetworkInfo) {
 			networkID = networkID[:12]
 		}
 
-		subnet := net.Subnet
-		if subnet == "" {
-			subnet = "-"
-		}
-
-		gateway := net.Gateway
-		if gateway == "" {
-			gateway = "-"
-		}
-
-		fmt.Printf("%-15s %-20s %-10s %-18s %-15s\n",
+		tableData = append(tableData, []string{
 			net.Name,
 			networkID,
 			net.Driver,
-			subnet,
-			gateway,
-		)
+			valueOrDefault(net.Subnet, "-"),
+			valueOrDefault(net.Gateway, "-"),
+		})
 	}
+
+	pterm.DefaultTable.WithHasHeader().WithData(tableData).Render()
 }
 
 func filterFinksNetworks(networks []docker.NetworkInfo) []docker.NetworkInfo {
