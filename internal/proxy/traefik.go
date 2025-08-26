@@ -113,6 +113,10 @@ func InstallTraefik(ctx context.Context, dockerClient *docker.Client, localMode 
 		return nil
 	}
 
+	if err := dockerClient.PullImage(ctx, traefikImage); err != nil {
+		return fmt.Errorf("failed to pull Traefik image: %w", err)
+	}
+
 	config := buildTraefikConfig(localMode)
 	runOptions := docker.RunOptions{
 		Name:     traefikContainerName,
