@@ -161,3 +161,39 @@ func buildTraefikVolumes() []string {
 		"/letsencrypt:/letsencrypt",
 	}
 }
+
+
+// GetTraefikStatus checks the status of the Traefik proxy container and network
+func GetTraefikStatus(ctx context.Context, dockerClient *docker.Client) (*TraefikStatus, error) {
+	status := &TraefikStatus{}
+
+	// Check if container exists
+	exists, err := dockerClient.ContainerExists(ctx, traefikContainerName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if Traefik container exists: %w", err)
+	}
+	status.ContainerExists = exists
+
+	if exists {
+		// Get container status
+		containerStatus, err := dockerClient.GetContainerStatus(ctx, traefikContainerName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get Traefik container status: %w", err)
+		}
+		status.ContainerStatus = containerStatus
+		status.IsRunning = strings.Contains(strings.ToLower(containerStatus), "running")
+
+		if status.IsRunning {
+			status.DashboardURL = "http://localhost:8080/dashboard/"
+		}
+	}
+
+	// Check if network exists
+	networkExists, err := dockerClient.NetworkExists(ctx, traefikNetworkName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check Traefik network: %w", err)
+	}
+	status.NetworkExists = networkExists
+
+	return status, nil
+}
