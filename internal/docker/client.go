@@ -61,36 +61,38 @@ func (c *Client) RunContainer(ctx context.Context, opts RunOptions) error {
 	var portBindings nat.PortMap
 	var exposedPorts nat.PortSet
 
-	if opts.Port != "" {
+	if len(opts.Ports) > 0 {
 		portBindings = make(nat.PortMap)
 		exposedPorts = make(nat.PortSet)
 
-		// Parse port format (e.g., "8080:80" or "8080:80/tcp")
-		parts := strings.Split(opts.Port, ":")
-		if len(parts) == 2 {
-			hostPort := parts[0]
-			containerPortStr := parts[1]
+		for _, portMapping := range opts.Ports {
+			// Parse port format (e.g., "8080:80" or "8080:80/tcp")
+			parts := strings.Split(portMapping, ":")
+			if len(parts) == 2 {
+				hostPort := parts[0]
+				containerPortStr := parts[1]
 
-			// Handle protocol specification
-			var proto string = "tcp"
-			if strings.Contains(containerPortStr, "/") {
-				protoParts := strings.Split(containerPortStr, "/")
-				containerPortStr = protoParts[0]
-				if len(protoParts) > 1 {
-					proto = protoParts[1]
+				// Handle protocol specification
+				var proto string = "tcp"
+				if strings.Contains(containerPortStr, "/") {
+					protoParts := strings.Split(containerPortStr, "/")
+					containerPortStr = protoParts[0]
+					if len(protoParts) > 1 {
+						proto = protoParts[1]
+					}
 				}
-			}
 
-			containerPort, err := nat.NewPort(proto, containerPortStr)
-			if err != nil {
-				return fmt.Errorf("invalid container port %s: %w", containerPortStr, err)
-			}
+				containerPort, err := nat.NewPort(proto, containerPortStr)
+				if err != nil {
+					return fmt.Errorf("invalid container port %s: %w", containerPortStr, err)
+				}
 
-			exposedPorts[containerPort] = struct{}{}
-			portBindings[containerPort] = []nat.PortBinding{
-				{
-					HostPort: hostPort,
-				},
+				exposedPorts[containerPort] = struct{}{}
+				portBindings[containerPort] = []nat.PortBinding{
+					{
+						HostPort: hostPort,
+					},
+				}
 			}
 		}
 	}

@@ -71,10 +71,15 @@ func (m *Manager) DeployApp(ctx context.Context, name, image, port string, envVa
 		return fmt.Errorf("failed to pull image: %w", err)
 	}
 
+	var ports []string
+	if port != "" {
+		ports = []string{port}
+	}
+
 	runOpts := docker.RunOptions{
 		Name:    containerName,
 		Image:   image,
-		Port:    port,
+		Ports:   ports,
 		EnvVars: envVars,
 		Volumes: volumes,
 	}

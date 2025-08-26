@@ -87,7 +87,7 @@ func sanitizeName(name string) string {
 	return result.String()
 }
 
-func InstallTraefik(ctx context.Context, dockerClient *docker.Client, localMode bool) error {
+func InstallTraefik(ctx context.Context, dockerClient *docker.Client) error {
 	if err := ensureTraefikNetwork(ctx, dockerClient); err != nil {
 		return fmt.Errorf("failed to ensure Traefik network: %w", err)
 	}
@@ -117,11 +117,11 @@ func InstallTraefik(ctx context.Context, dockerClient *docker.Client, localMode 
 		return fmt.Errorf("failed to pull Traefik image: %w", err)
 	}
 
-	config := buildTraefikConfig(localMode)
+	config := buildTraefikConfig()
 	runOptions := docker.RunOptions{
 		Name:     traefikContainerName,
 		Image:    traefikImage,
-		Port:     buildPortMapping(localMode),
+		Ports:    []string{"80:80", "8080:8080"},
 		EnvVars:  config,
 		Networks: []string{traefikNetworkName},
 		Volumes:  buildTraefikVolumes(),
@@ -142,32 +142,18 @@ func ensureTraefikNetwork(ctx context.Context, dockerClient *docker.Client) erro
 	return nil
 }
 
-func buildTraefikConfig(localMode bool) map[string]string {
-	config := map[string]string{
+func buildTraefikConfig() map[string]string {
+	return map[string]string{
+		"TRAEFIK_API":                               "true",
 		"TRAEFIK_API_DASHBOARD":                     "true",
+		"TRAEFIK_API_INSECURE":                      "true",
 		"TRAEFIK_PROVIDERS_DOCKER":                  "true",
 		"TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT": "false",
 		"TRAEFIK_ENTRYPOINTS_WEB_ADDRESS":           ":80",
+		"TRAEFIK_ENTRYPOINTS_TRAEFIK_ADDRESS":       ":8080",
 	}
-
-	if localMode {
-		config["TRAEFIK_API_INSECURE"] = "true"
-	} else {
-		config["TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS"] = ":443"
-		config["TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_TLSCHALLENGE"] = "true"
-		config["TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL"] = "admin@example.com"
-		config["TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_STORAGE"] = "/letsencrypt/acme.json"
-	}
-
-	return config
 }
 
-func buildPortMapping(localMode bool) string {
-	if localMode {
-		return "80:80"
-	}
-	return "80:80,443:443"
-}
 
 func buildTraefikVolumes() []string {
 	return []string{

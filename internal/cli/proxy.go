@@ -35,25 +35,18 @@ var installProxyCmd = &cobra.Command{
 	Short: "Install Traefik proxy container",
 	Long:  `Install and configure Traefik proxy container with proper networking setup.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		localMode, _ := cmd.Flags().GetBool("local")
-
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
 		spinner, _ := pterm.DefaultSpinner.Start("Installing Traefik proxy...")
 
-		if err := proxy.InstallTraefik(ctx, proxyDockerClient, localMode); err != nil {
+		if err := proxy.InstallTraefik(ctx, proxyDockerClient); err != nil {
 			spinner.Fail(fmt.Sprintf("Failed to install Traefik: %v", err))
 			return fmt.Errorf("failed to install Traefik: %w", err)
 		}
 
 		spinner.Success("Traefik proxy installed successfully!")
-
-		if localMode {
-			pterm.Success.Println("Traefik dashboard available at: http://localhost/dashboard/")
-		} else {
-			pterm.Success.Println("Traefik proxy configured for production mode with Let's Encrypt")
-		}
+		pterm.Success.Println("Traefik dashboard available at: http://localhost:8080/dashboard/")
 
 		return nil
 	},
@@ -97,7 +90,7 @@ var statusProxyCmd = &cobra.Command{
 		}
 
 		if strings.Contains(strings.ToLower(status), "running") {
-			pterm.Info.Println("Traefik dashboard: http://localhost/dashboard/ (if in local mode)")
+			pterm.Info.Println("Traefik dashboard: http://localhost:8080/dashboard/")
 		}
 
 		return nil
@@ -129,6 +122,4 @@ var connectProxyCmd = &cobra.Command{
 
 func init() {
 	proxyCmd.AddCommand(installProxyCmd, statusProxyCmd, connectProxyCmd)
-
-	installProxyCmd.Flags().BoolP("local", "l", false, "Install in local development mode (HTTP only, insecure dashboard)")
 }

@@ -3,7 +3,7 @@ package docker
 type RunOptions struct {
 	Name     string
 	Image    string
-	Port     string
+	Ports    []string
 	EnvVars  map[string]string
 	Volumes  []string
 	Labels   map[string]string // Added for Traefik labels
