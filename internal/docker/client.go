@@ -57,43 +57,23 @@ func (c *Client) PullImage(ctx context.Context, imageName string) error {
 }
 
 func (c *Client) RunContainer(ctx context.Context, opts RunOptions) error {
-	// Parse port mappings
+	// Parse port mappings using Docker SDK utility
 	var portBindings nat.PortMap
 	var exposedPorts nat.PortSet
 
 	if len(opts.Ports) > 0 {
-		portBindings = make(nat.PortMap)
+		// Use Docker SDK's ParsePortSpecs for robust port parsing
+		var portSpecs nat.PortSet
+		var err error
+		portSpecs, portBindings, err = nat.ParsePortSpecs(opts.Ports)
+		if err != nil {
+			return fmt.Errorf("invalid port specification: %w", err)
+		}
+
+		// Convert port specs to exposed ports
 		exposedPorts = make(nat.PortSet)
-
-		for _, portMapping := range opts.Ports {
-			// Parse port format (e.g., "8080:80" or "8080:80/tcp")
-			parts := strings.Split(portMapping, ":")
-			if len(parts) == 2 {
-				hostPort := parts[0]
-				containerPortStr := parts[1]
-
-				// Handle protocol specification
-				var proto string = "tcp"
-				if strings.Contains(containerPortStr, "/") {
-					protoParts := strings.Split(containerPortStr, "/")
-					containerPortStr = protoParts[0]
-					if len(protoParts) > 1 {
-						proto = protoParts[1]
-					}
-				}
-
-				containerPort, err := nat.NewPort(proto, containerPortStr)
-				if err != nil {
-					return fmt.Errorf("invalid container port %s: %w", containerPortStr, err)
-				}
-
-				exposedPorts[containerPort] = struct{}{}
-				portBindings[containerPort] = []nat.PortBinding{
-					{
-						HostPort: hostPort,
-					},
-				}
-			}
+		for port := range portSpecs {
+			exposedPorts[port] = struct{}{}
 		}
 	}
 
@@ -108,13 +88,19 @@ func (c *Client) RunContainer(ctx context.Context, opts RunOptions) error {
 		Image:        opts.Image,
 		Env:          env,
 		ExposedPorts: exposedPorts,
-		Labels:       opts.Labels, // Include Traefik labels
+		Labels:       opts.Labels,
+	}
+
+	// Set restart policy with default fallback
+	restartPolicy := opts.RestartPolicy
+	if restartPolicy == "" {
+		restartPolicy = "unless-stopped" // Default policy
 	}
 
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
 		RestartPolicy: container.RestartPolicy{
-			Name: "unless-stopped",
+			Name: container.RestartPolicyMode(restartPolicy),
 		},
 		Binds: opts.Volumes,
 	}
@@ -129,14 +115,17 @@ func (c *Client) RunContainer(ctx context.Context, opts RunOptions) error {
 		networkConfig.EndpointsConfig = endpointsConfig
 	}
 
-	// Create container
 	resp, err := c.cli.ContainerCreate(ctx, config, hostConfig, networkConfig, nil, opts.Name)
 	if err != nil {
 		return fmt.Errorf("failed to create container %s: %w", opts.Name, err)
 	}
 
-	// Start container
+	// Cleanup on failure
 	if err := c.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		// If start fails, attempt to remove the created container to avoid orphaned containers
+		if removeErr := c.cli.ContainerRemove(ctx, resp.ID, container.RemoveOptions{Force: true}); removeErr != nil {
+			return fmt.Errorf("failed to start container %s and failed to cleanup: start error: %w, cleanup error: %v", opts.Name, err, removeErr)
+		}
 		return fmt.Errorf("failed to start container %s: %w", opts.Name, err)
 	}
 
