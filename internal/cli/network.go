@@ -55,9 +55,15 @@ var createNetworkCmd = &cobra.Command{
 	Use:   "create <network-name>",
 	Short: "Create a new Docker network",
 	Long:  `Create a new Docker network with the specified name and optional driver.`,
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		networkName := finksNetworkPrefix + args[0]
+		var networkName string
+		if len(args) == 0 {
+			networkName = finksNetworkPrefix + "default"
+		} else {
+			networkName = finksNetworkPrefix + args[0]
+		}
+
 		driver, _ := cmd.Flags().GetString("driver")
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
