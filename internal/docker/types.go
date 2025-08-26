@@ -26,10 +26,3 @@ type NetworkInfo struct {
 	Labels  map[string]string `json:"labels"`
 }
 
-type TraefikConfig struct {
-	AppName     string
-	Domain      string
-	Port        string
-	NetworkName string
-	LocalMode   bool
-}

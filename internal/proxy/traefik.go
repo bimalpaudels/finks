@@ -1,14 +1,13 @@
-package docker
+package proxy
 
 import (
 	"fmt"
 	"strings"
 )
 
-
 func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 	labels := make(map[string]string)
-	
+
 	// Sanitize app name for router/service names
 	routerName := sanitizeName(config.AppName)
 	serviceName := sanitizeName(config.AppName)
@@ -45,7 +44,7 @@ func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 		labels[fmt.Sprintf("traefik.http.routers.%s.rule", redirectRouter)] = fmt.Sprintf("Host(`%s`)", config.Domain)
 		labels[fmt.Sprintf("traefik.http.routers.%s.entrypoints", redirectRouter)] = "web"
 		labels[fmt.Sprintf("traefik.http.routers.%s.middlewares", redirectRouter)] = "https-redirect"
-		
+
 		// HTTPS redirect middleware
 		labels["traefik.http.middlewares.https-redirect.redirectscheme.scheme"] = "https"
 		labels["traefik.http.middlewares.https-redirect.redirectscheme.permanent"] = "true"
@@ -66,7 +65,7 @@ func sanitizeName(name string) string {
 	sanitized := strings.ReplaceAll(name, "_", "-")
 	sanitized = strings.ReplaceAll(sanitized, " ", "-")
 	sanitized = strings.ToLower(sanitized)
-	
+
 	// Keep only alphanumeric characters and hyphens
 	var result strings.Builder
 	for _, r := range sanitized {
@@ -74,6 +73,6 @@ func sanitizeName(name string) string {
 			result.WriteRune(r)
 		}
 	}
-	
+
 	return result.String()
 }
