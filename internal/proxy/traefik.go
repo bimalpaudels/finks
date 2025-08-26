@@ -1,20 +1,29 @@
-package docker
+package proxy
 
 import (
+	"context"
 	"fmt"
 	"strings"
+
+	"github.com/bimalpaudels/finks/internal/docker"
 )
 
+const (
+	defaultNetworkName   = "finks-default"
+	traefikNetworkName   = "finks-traefik"
+	traefikContainerName = "finks-traefik"
+	traefikImage         = "traefik:v3.0"
+)
 
 func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 	labels := make(map[string]string)
-	
+
 	// Sanitize app name for router/service names
 	routerName := sanitizeName(config.AppName)
 	serviceName := sanitizeName(config.AppName)
 	networkName := config.NetworkName
 	if networkName == "" {
-		networkName = "finks-network"
+		networkName = defaultNetworkName
 	}
 
 	// Basic Traefik configuration
@@ -45,7 +54,7 @@ func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 		labels[fmt.Sprintf("traefik.http.routers.%s.rule", redirectRouter)] = fmt.Sprintf("Host(`%s`)", config.Domain)
 		labels[fmt.Sprintf("traefik.http.routers.%s.entrypoints", redirectRouter)] = "web"
 		labels[fmt.Sprintf("traefik.http.routers.%s.middlewares", redirectRouter)] = "https-redirect"
-		
+
 		// HTTPS redirect middleware
 		labels["traefik.http.middlewares.https-redirect.redirectscheme.scheme"] = "https"
 		labels["traefik.http.middlewares.https-redirect.redirectscheme.permanent"] = "true"
@@ -66,7 +75,7 @@ func sanitizeName(name string) string {
 	sanitized := strings.ReplaceAll(name, "_", "-")
 	sanitized = strings.ReplaceAll(sanitized, " ", "-")
 	sanitized = strings.ToLower(sanitized)
-	
+
 	// Keep only alphanumeric characters and hyphens
 	var result strings.Builder
 	for _, r := range sanitized {
@@ -74,6 +83,81 @@ func sanitizeName(name string) string {
 			result.WriteRune(r)
 		}
 	}
-	
+
 	return result.String()
+}
+
+func InstallTraefik(ctx context.Context, dockerClient *docker.Client) error {
+	if err := ensureTraefikNetwork(ctx, dockerClient); err != nil {
+		return fmt.Errorf("failed to ensure Traefik network: %w", err)
+	}
+
+	exists, err := dockerClient.ContainerExists(ctx, traefikContainerName)
+	if err != nil {
+		return fmt.Errorf("failed to check if Traefik container exists: %w", err)
+	}
+
+	if exists {
+		status, err := dockerClient.GetContainerStatus(ctx, traefikContainerName)
+		if err != nil {
+			return fmt.Errorf("failed to get Traefik container status: %w", err)
+		}
+
+		if strings.Contains(strings.ToLower(status), "running") {
+			return nil
+		}
+
+		if err := dockerClient.StartContainer(ctx, traefikContainerName); err != nil {
+			return fmt.Errorf("failed to start existing Traefik container: %w", err)
+		}
+		return nil
+	}
+
+	if err := dockerClient.PullImage(ctx, traefikImage); err != nil {
+		return fmt.Errorf("failed to pull Traefik image: %w", err)
+	}
+
+	config := buildTraefikConfig()
+	runOptions := docker.RunOptions{
+		Name:     traefikContainerName,
+		Image:    traefikImage,
+		Ports:    []string{"80:80", "8080:8080"},
+		EnvVars:  config,
+		Networks: []string{traefikNetworkName},
+		Volumes:  buildTraefikVolumes(),
+	}
+
+	if err := dockerClient.RunContainer(ctx, runOptions); err != nil {
+		return fmt.Errorf("failed to run Traefik container: %w", err)
+	}
+
+	return nil
+}
+
+func ensureTraefikNetwork(ctx context.Context, dockerClient *docker.Client) error {
+	_, err := dockerClient.EnsureNetwork(ctx, traefikNetworkName, "bridge", nil)
+	if err != nil {
+		return fmt.Errorf("failed to ensure network %s: %w", traefikNetworkName, err)
+	}
+	return nil
+}
+
+func buildTraefikConfig() map[string]string {
+	return map[string]string{
+		"TRAEFIK_API":                               "true",
+		"TRAEFIK_API_DASHBOARD":                     "true",
+		"TRAEFIK_API_INSECURE":                      "true",
+		"TRAEFIK_PROVIDERS_DOCKER":                  "true",
+		"TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT": "false",
+		"TRAEFIK_ENTRYPOINTS_WEB_ADDRESS":           ":80",
+		"TRAEFIK_ENTRYPOINTS_TRAEFIK_ADDRESS":       ":8080",
+	}
+}
+
+
+func buildTraefikVolumes() []string {
+	return []string{
+		"/var/run/docker.sock:/var/run/docker.sock:ro",
+		"/letsencrypt:/letsencrypt",
+	}
 }

@@ -1,13 +1,14 @@
 package docker
 
 type RunOptions struct {
-	Name     string
-	Image    string
-	Port     string
-	EnvVars  map[string]string
-	Volumes  []string
-	Labels   map[string]string // Added for Traefik labels
-	Networks []string          // Added for network connections
+	Name          string
+	Image         string
+	Ports         []string
+	EnvVars       map[string]string
+	Volumes       []string
+	Labels        map[string]string // Added for Traefik labels
+	Networks      []string          // Added for network connections
+	RestartPolicy string            // Docker restart policy (no, always, unless-stopped, on-failure)
 }
 
 type Container struct {
@@ -26,10 +27,3 @@ type NetworkInfo struct {
 	Labels  map[string]string `json:"labels"`
 }
 
-type TraefikConfig struct {
-	AppName     string
-	Domain      string
-	Port        string
-	NetworkName string
-	LocalMode   bool
-}
