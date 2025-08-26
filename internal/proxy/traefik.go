@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+const defaultNetworkName = "finks-default"
+
 func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 	labels := make(map[string]string)
 
@@ -13,7 +15,7 @@ func GenerateTraefikLabels(config TraefikConfig) map[string]string {
 	serviceName := sanitizeName(config.AppName)
 	networkName := config.NetworkName
 	if networkName == "" {
-		networkName = "finks-network"
+		networkName = defaultNetworkName
 	}
 
 	// Basic Traefik configuration
