@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*"
 
 jobs:
   build:
@@ -48,9 +48,8 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
-          VERSION: ${{ github.ref_name }}
         run: |
-          VERSION=${VERSION:-dev}
+          VERSION="${{ github.ref_name }}"
           BINARY_NAME="finks-${{ matrix.os }}-${{ matrix.arch }}"
           go build -ldflags="-s -w -X main.version=${VERSION}" -o ${BINARY_NAME} ./cmd/finks/main.go
           chmod +x ${BINARY_NAME}
@@ -81,6 +80,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           files: |
             artifacts/**/finks-*
           generate_release_notes: true
