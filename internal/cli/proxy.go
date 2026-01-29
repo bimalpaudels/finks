@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/bimalpaudels/finks/internal/docker"
@@ -60,37 +59,27 @@ var statusProxyCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		exists, err := proxyDockerClient.ContainerExists(ctx, "finks-traefik")
+		status, err := proxy.GetTraefikStatus(ctx, proxyDockerClient)
 		if err != nil {
-			return fmt.Errorf("failed to check if Traefik container exists: %w", err)
+			return fmt.Errorf("failed to get Traefik status: %w", err)
 		}
 
-		if !exists {
+		if !status.ContainerExists {
 			pterm.Warning.Println("Traefik container is not installed")
 			pterm.Info.Println("Run 'finks proxy install' to install Traefik")
 			return nil
 		}
 
-		status, err := proxyDockerClient.GetContainerStatus(ctx, "finks-traefik")
-		if err != nil {
-			return fmt.Errorf("failed to get Traefik container status: %w", err)
-		}
+		pterm.Success.Println(fmt.Sprintf("Traefik container: %s", status.ContainerStatus))
 
-		pterm.Success.Println(fmt.Sprintf("Traefik container: %s", status))
-
-		networkExists, err := proxyDockerClient.NetworkExists(ctx, "finks-traefik")
-		if err != nil {
-			return fmt.Errorf("failed to check Traefik network: %w", err)
-		}
-
-		if networkExists {
+		if status.NetworkExists {
 			pterm.Success.Println("Traefik network: finks-traefik exists")
 		} else {
 			pterm.Warning.Println("Traefik network: finks-traefik does not exist")
 		}
 
-		if strings.Contains(strings.ToLower(status), "running") {
-			pterm.Info.Println("Traefik dashboard: http://localhost:8080/dashboard/")
+		if status.IsRunning {
+			pterm.Info.Println(fmt.Sprintf("Traefik dashboard: %s", status.DashboardURL))
 		}
 
 		return nil

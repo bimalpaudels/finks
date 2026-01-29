@@ -7,3 +7,11 @@ type TraefikConfig struct {
 	NetworkName string
 	LocalMode   bool
 }
+
+type TraefikStatus struct {
+	ContainerExists bool
+	ContainerStatus string
+	NetworkExists   bool
+	DashboardURL    string
+	IsRunning       bool
+}
