@@ -110,6 +110,21 @@ func (d *DockerRequirement) Verify(ctx context.Context) error {
 	return d.client.IsAvailable(ctx)
 }
 
+// InstallCommand returns the command used to install Docker.
+// On Linux, returns the get.docker.com curl command.
+// On other OSes, returns the Docker installation URL.
+func (d *DockerRequirement) InstallCommand() string {
+	if runtime.GOOS == "linux" {
+		return "curl -fsSL https://get.docker.com | sh"
+	}
+	return "https://docs.docker.com/get-docker/"
+}
+
+// CanAutoInstall returns true if automatic installation is supported on this OS.
+func (d *DockerRequirement) CanAutoInstall() bool {
+	return runtime.GOOS == "linux"
+}
+
 // Install runs the Docker convenience script on Linux; on other OSes it returns instructions.
 func (d *DockerRequirement) Install(ctx context.Context) (installed bool, err error) {
 	if runtime.GOOS != "linux" {

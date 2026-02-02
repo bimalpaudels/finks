@@ -1,7 +1,6 @@
 package steps
 
 import (
-	"github.com/bimalpaudels/finks/internal/checker"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -11,27 +10,26 @@ var (
 	doneError   = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
 )
 
-// DoneView renders the "You're good to go" stage.
-// If verifyOK is false, shows error message and install hint.
-func DoneView(verifyOK bool, verifyErr error, installErr error, checkResult checker.CheckResultMsg) string {
+// DoneViewSimple renders the done stage with just success/error state.
+// If verifyOK is true, shows success message.
+// If verifyOK is false, shows error message from verifyErr or installErr.
+func DoneViewSimple(verifyOK bool, verifyErr error, installErr error) string {
 	if verifyOK {
-		msg := doneSuccess.Render("You're good to go!")
+		msg := doneSuccess.Render("Everything is set!")
 		hint := doneDim.Render("Finks is ready. Run `finks --help` to get started.")
 		return "\n  " + msg + "\n\n  " + hint + "\n\n"
 	}
-	// Show failure: Docker missing or verify failed
+	// Show failure
 	var errMsg string
 	if verifyErr != nil {
 		errMsg = verifyErr.Error()
 	} else if installErr != nil {
 		errMsg = installErr.Error()
-	} else if !checkResult.DockerOK && checkResult.Err != nil {
-		errMsg = checkResult.Err.Error()
 	} else {
-		errMsg = "Docker is required. Install from https://docs.docker.com/get-docker/"
+		errMsg = "A required dependency is not ready. Install it and run this wizard again."
 	}
-	line := doneError.Render("Docker is not ready: " + errMsg)
-	hint := doneDim.Render("After installing Docker, run this wizard again.")
+	line := doneError.Render("Setup failed: " + errMsg)
+	hint := doneDim.Render("After fixing the issue, run this wizard again.")
 	return "\n  " + line + "\n\n  " + hint + "\n\n"
 }
 
